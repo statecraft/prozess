@@ -9,6 +9,11 @@
 /* Begin PBXBuildFile section */
 		FD0138B91F0E14DA0037B405 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = FD0138B81F0E14DA0037B405 /* main.c */; };
 		FD70890D1F5166280077F3D3 /* cmp.c in Sources */ = {isa = PBXBuildFile; fileRef = FD70890B1F5166280077F3D3 /* cmp.c */; };
+		FD7089101F52596D0077F3D3 /* connection.c in Sources */ = {isa = PBXBuildFile; fileRef = FD70890E1F52596D0077F3D3 /* connection.c */; };
+		FD7089131F52D8380077F3D3 /* topic.c in Sources */ = {isa = PBXBuildFile; fileRef = FD7089111F52D8380077F3D3 /* topic.c */; };
+		FDBA9C9A1F5D8ED5008918AE /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = FDBA9C971F5D8ED5008918AE /* crc32.c */; };
+		FDBA9C9B1F5D8ED5008918AE /* crc32_sse42.c in Sources */ = {isa = PBXBuildFile; fileRef = FDBA9C991F5D8ED5008918AE /* crc32_sse42.c */; };
+		FDF162BC1F53DA84003D70A8 /* arena.c in Sources */ = {isa = PBXBuildFile; fileRef = FDF162BA1F53DA84003D70A8 /* arena.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +33,18 @@
 		FD0138B81F0E14DA0037B405 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		FD70890B1F5166280077F3D3 /* cmp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cmp.c; path = minikafka/cmp.c; sourceTree = "<group>"; };
 		FD70890C1F5166280077F3D3 /* cmp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cmp.h; path = minikafka/cmp.h; sourceTree = "<group>"; };
+		FD70890E1F52596D0077F3D3 /* connection.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = connection.c; sourceTree = "<group>"; };
+		FD70890F1F52596D0077F3D3 /* connection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = connection.h; sourceTree = "<group>"; };
+		FD7089111F52D8380077F3D3 /* topic.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = topic.c; sourceTree = "<group>"; };
+		FD7089121F52D8380077F3D3 /* topic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = topic.h; sourceTree = "<group>"; };
+		FD7089151F52EA710077F3D3 /* khash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = khash.h; path = minikafka/khash.h; sourceTree = "<group>"; };
+		FD7089161F52ECC10077F3D3 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		FDBA9C971F5D8ED5008918AE /* crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = crc32.c; path = minikafka/crc32.c; sourceTree = "<group>"; };
+		FDBA9C981F5D8ED5008918AE /* crc32.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = crc32.h; path = minikafka/crc32.h; sourceTree = "<group>"; };
+		FDBA9C991F5D8ED5008918AE /* crc32_sse42.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = crc32_sse42.c; path = minikafka/crc32_sse42.c; sourceTree = "<group>"; };
+		FDBA9C9C1F5D9050008918AE /* kvec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kvec.h; path = minikafka/kvec.h; sourceTree = "<group>"; };
+		FDF162BA1F53DA84003D70A8 /* arena.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = arena.c; sourceTree = "<group>"; };
+		FDF162BB1F53DA84003D70A8 /* arena.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = arena.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +61,8 @@
 		FD0138AC1F0E14D90037B405 = {
 			isa = PBXGroup;
 			children = (
+				FDBA9C811F5CDB66008918AE /* crc32 */,
+				FD7089141F52EA690077F3D3 /* klib */,
 				FD70890A1F5166040077F3D3 /* cmp */,
 				FD0138B71F0E14DA0037B405 /* minikafka */,
 				FD0138B61F0E14DA0037B405 /* Products */,
@@ -62,6 +81,13 @@
 			isa = PBXGroup;
 			children = (
 				FD0138B81F0E14DA0037B405 /* main.c */,
+				FD70890E1F52596D0077F3D3 /* connection.c */,
+				FD70890F1F52596D0077F3D3 /* connection.h */,
+				FD7089111F52D8380077F3D3 /* topic.c */,
+				FD7089121F52D8380077F3D3 /* topic.h */,
+				FD7089161F52ECC10077F3D3 /* common.h */,
+				FDF162BA1F53DA84003D70A8 /* arena.c */,
+				FDF162BB1F53DA84003D70A8 /* arena.h */,
 			);
 			path = minikafka;
 			sourceTree = "<group>";
@@ -73,6 +99,25 @@
 				FD70890C1F5166280077F3D3 /* cmp.h */,
 			);
 			name = cmp;
+			sourceTree = "<group>";
+		};
+		FD7089141F52EA690077F3D3 /* klib */ = {
+			isa = PBXGroup;
+			children = (
+				FDBA9C9C1F5D9050008918AE /* kvec.h */,
+				FD7089151F52EA710077F3D3 /* khash.h */,
+			);
+			name = klib;
+			sourceTree = "<group>";
+		};
+		FDBA9C811F5CDB66008918AE /* crc32 */ = {
+			isa = PBXGroup;
+			children = (
+				FDBA9C971F5D8ED5008918AE /* crc32.c */,
+				FDBA9C981F5D8ED5008918AE /* crc32.h */,
+				FDBA9C991F5D8ED5008918AE /* crc32_sse42.c */,
+			);
+			name = crc32;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -133,8 +178,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FDBA9C9B1F5D8ED5008918AE /* crc32_sse42.c in Sources */,
+				FD7089101F52596D0077F3D3 /* connection.c in Sources */,
 				FD70890D1F5166280077F3D3 /* cmp.c in Sources */,
 				FD0138B91F0E14DA0037B405 /* main.c in Sources */,
+				FDBA9C9A1F5D8ED5008918AE /* crc32.c in Sources */,
+				FD7089131F52D8380077F3D3 /* topic.c in Sources */,
+				FDF162BC1F53DA84003D70A8 /* arena.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
