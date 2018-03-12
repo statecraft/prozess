@@ -3,6 +3,7 @@
 #define topic_h
 
 #include "common.h"
+#include "connection.h" // Sad I need to do this for in_sub_req_t.
 
 struct topic_t;
 typedef struct topic_t topic_t;
@@ -17,7 +18,7 @@ void db_mark_conflict_key(topic_t *db, version_t v, char *key, size_t keylen);
 
 version_t db_append_event(topic_t *db, data_buffer event);
 
-void db_subscribe(topic_t *topic, struct connection_t *connection, version_t start, size_t maxbytes);
+void db_subscribe(topic_t *topic, struct connection_t *connection, in_sub_req_t req);
 void db_unsubscribe(topic_t *topic, struct connection_t *connection);
 
 #endif

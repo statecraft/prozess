@@ -194,6 +194,7 @@ int db_send_hello(topic_t *topic, connection_t *conn) {
 
 
 bool db_key_in_conflict(topic_t *topic, version_t ok_at_v, char *key, size_t keylen) {
+    if (ok_at_v < topic->v_base) return true;
     if (ok_at_v == topic->next_version) return false;
     
     kh_kvmap_t *h = topic->key_lastmod;
@@ -268,12 +269,6 @@ version_t db_append_event(topic_t *topic, data_buffer event) {
         
         if (conn->sub_bytes_remaining <= event.size) {
             db_unsubscribe(topic, conn);
-            
-            out_sub_end_t msg = {
-                .msg_type = OUT_MSG_SUB_END,
-                .proto_version = 0
-            };
-            write(conn->fd, &msg, sizeof(msg));
         } else {
             i++;
         }
@@ -327,6 +322,7 @@ v_pos_tuple data_pos_at_v(topic_t *topic, version_t target_v) {
 
 
 uint32_t data_pos_after_byte(topic_t *topic, uint32_t pos) {
+    // TODO: Is > correct? Not >=?
     if (pos > topic->data_pos) return topic->data_pos;
     
     uint32_t scan_ptr = DATA_START_POS;
@@ -354,48 +350,58 @@ uint32_t data_pos_after_byte(topic_t *topic, uint32_t pos) {
 
 
 static void db_subscribe_raw(topic_t *topic, connection_t *connection, size_t bytes_remaining) {
-    connection->sub_idx = kv_size(topic->subs);
-    connection->sub_bytes_remaining = bytes_remaining;
-    kv_push(connection_t *, topic->subs, connection);
-}
-
-void db_subscribe(topic_t *topic, connection_t *connection, version_t start, size_t maxbytes) {
     if (connection->sub_idx != -1) {
         // Already subscribed. Cancel the existing subscription.
         db_unsubscribe(topic, connection);
         // TODO: Message the client when this happens.
     }
     
-    if (start == 0) start = 1;
+    connection->sub_idx = kv_size(topic->subs);
+    connection->sub_bytes_remaining = bytes_remaining;
+    kv_push(connection_t *, topic->subs, connection);
+}
+
+void db_subscribe(topic_t *topic, connection_t *connection, in_sub_req_t req) {
+    if (req.start == 0) req.start = 1;
     // start == UINT64_MAX if we just want to subscribe to current.
     
-    sub_response_t res = {
+    out_sub_response_t res = {
         .msg_type = OUT_MSG_SUB,
         .proto_version = 0,
+        .flags = (req.flags & SUB_FLAG_ONESHOT),
     };
     
     // TODO: Read maxbytes from start, then...
-    if (start <= topic->next_version) {
-        res.v_start = start;
+    if (req.start <= topic->next_version) {
+        res.v_start = req.start;
         // What do we do if start > current?
-        v_pos_tuple v_pos = data_pos_at_v(topic, start);
-        if (maxbytes == SIZE_T_MAX || v_pos.pos + maxbytes > topic->data_pos) {
-            printf("Subscription catchup\n");
+        v_pos_tuple v_pos = data_pos_at_v(topic, req.start);
+        if (!(req.flags & SUB_FLAG_ONESHOT) &&
+                (req.maxbytes == UINT32_MAX || v_pos.pos + req.maxbytes > topic->data_pos)) {
+            // Catchup mode. We'll send some data now and also subscribe them.
+            printf("Subscription catchup from v%llu to v%llu\n", req.start, topic->next_version-1);
+            
             // Send everything remaining and subscribe.
             off_t len = topic->data_pos - v_pos.pos;
             // TODO: Hoist this write into the event loop.
+            res.flags = SUB_OUT_FLAG_CURRENT;
             res.size = len;
-            res.flags = SUB_FLAG_ONGOING;
             
             write(connection->fd, &res, sizeof(res));
             sendfile(topic->data_fd, connection->fd, v_pos.pos, &len, NULL, 0);
-            db_subscribe_raw(topic, connection, maxbytes - (topic->data_pos - v_pos.pos));
+            db_subscribe_raw(topic, connection, req.maxbytes - (topic->data_pos - v_pos.pos));
         } else {
+            // Completion mode. Everything the client needs is in the subscription response.
             printf("Subscription completion\n");
             // Stop at an operation boundary. Ugh.
-            uint32_t end = data_pos_after_byte(topic, (uint32_t)(v_pos.pos + maxbytes));
+            uint32_t end = data_pos_after_byte(topic, (uint32_t)(v_pos.pos + req.maxbytes));
             // TODO: Hoist this write into the event loop.
             off_t len = end - v_pos.pos;
+            
+            // In oneshot mode, the complete flag indicates that we're caught up to current.
+            res.flags = (req.flags & SUB_FLAG_ONESHOT) // Copy oneshot flag
+            | SUB_OUT_FLAG_COMPLETE // We aren't subscribing
+            | (end == topic->data_pos ? SUB_OUT_FLAG_CURRENT : 0);
             
             res.size = len;
             write(connection->fd, &res, sizeof(res));
@@ -403,13 +409,21 @@ void db_subscribe(topic_t *topic, connection_t *connection, version_t start, siz
                 sendfile(topic->data_fd, connection->fd, v_pos.pos, &len, NULL, 0);
             }
         }
+    } else if (req.flags & SUB_FLAG_ONESHOT) {
+        // There's no data to send. The client asked for a catchup but doesn't want to actually get
+        // subscribed.
+        printf("Empty catchup\n");
+        res.v_start = topic->next_version;
+        res.flags = SUB_FLAG_ONESHOT | SUB_OUT_FLAG_COMPLETE | SUB_OUT_FLAG_CURRENT;
+        res.size = 0;
+        write(connection->fd, &res, sizeof(res));
     } else {
         printf("Subscription raw\n");
         res.v_start = topic->next_version;
+        res.flags = SUB_OUT_FLAG_CURRENT;
         res.size = 0;
-        res.flags = SUB_FLAG_ONGOING;
         write(connection->fd, &res, sizeof(res));
-        db_subscribe_raw(topic, connection, maxbytes);
+        db_subscribe_raw(topic, connection, req.maxbytes);
     }
 }
 
@@ -423,4 +437,10 @@ void db_unsubscribe(topic_t *topic, connection_t *connection) {
     replacement->sub_idx = i;
     connection->sub_idx = -1;
     kv_size(topic->subs)--;
+    
+    out_sub_end_t msg = {
+        .msg_type = OUT_MSG_SUB_END,
+        .proto_version = 0
+    };
+    write(connection->fd, &msg, sizeof(msg));
 }

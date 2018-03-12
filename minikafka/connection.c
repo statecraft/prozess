@@ -18,6 +18,8 @@
 #include <assert.h>
 #include <unistd.h>
 
+const version_t VERSION_CONFLICT = UINT64_MAX;
+
 // TODO: optimize for zero-allocate.
 connection_t *kc_new(int fd) {
     connection_t *c = malloc(sizeof(connection_t));
@@ -102,6 +104,7 @@ enum process_message_err {
     ERR_OK = 0,
     ERR_INVALID_DATA = 1,
     ERR_CONFLICT = 2,
+    ERR_UNKNOWN_MSG_TYPE = 3,
 };
 // Messagepack messages are
 
@@ -128,8 +131,10 @@ int process_client_message(connection_t *conn, in_msg_t msgtype, void *msg, uint
             if (size != 3) return ERR_INVALID_DATA;
             
             // Read fields.
-            uint64_t target_version;
-            CHK(cmp_read_uinteger(&cmp, &target_version))
+            
+            // Target version is read signed because -1 means we ignore conflicts.
+            int64_t target_version;
+            CHK(cmp_read_integer(&cmp, &target_version))
             
             // List of interception keys
             uint32_t conflict_keys;
@@ -139,15 +144,22 @@ int process_client_message(connection_t *conn, in_msg_t msgtype, void *msg, uint
                 char buf[1000];
                 uint32_t str_size = sizeof(buf);
                 cmp_read_str(&cmp, buf, &str_size);
-                if (db_key_in_conflict(topic, target_version, buf, str_size)) {
+                if (target_version >= 0 && db_key_in_conflict(topic, target_version, buf, str_size)) {
                     printf("abort - key conflict in %s\n", buf);
-                    return ERR_CONFLICT;
+                    
+                    event_response_t client_msg = {
+                        .msg_type = OUT_MSG_EVENT_CONFIRM,
+                        .proto_version = 0,
+                        .v_start = VERSION_CONFLICT,
+                    };
+                    write(conn->fd, &client_msg, sizeof(client_msg));
+
+                    return 0;
                 }
             }
-            
+        
             // Binary blob. If happy, memcpy this straight to the pool room.
-            
-//            printf("byte %x at %ld\n", ((uint8_t *)buf.bytes)[0], buf.bytes - _orig);
+
             CHK(cmp_read_bin_size(&cmp, &size))
             printf("%d bytes in data blob\n", size);
             
@@ -170,33 +182,32 @@ int process_client_message(connection_t *conn, in_msg_t msgtype, void *msg, uint
                 db_mark_conflict_key(topic, resulting_version, buf, str_size);
             }
             
-            
-            break;
+            return 0;
         }
             
         case IN_MSG_SUB: {
-            // array of start version (or -1), max bytes.
+            // array of flags, start version (or -1), max bytes.
             uint32_t size;
             CHK(cmp_read_array(&cmp, &size))
-            if (size != 2) return ERR_INVALID_DATA;
+            if (size != 3) return ERR_INVALID_DATA;
 
-            int64_t start_version;
-            CHK(cmp_read_integer(&cmp, &start_version))
+            in_sub_req_t req;
+            CHK(cmp_read_uchar(&cmp, &req.flags))
             
-            uint64_t max_bytes;
-            CHK(cmp_read_uinteger(&cmp, &max_bytes))
+            int64_t start;
+            CHK(cmp_read_integer(&cmp, &start))
+            // A start of -1 means we want to subscribe from the current version.
+            req.start = start >= 0 ? start : UINT64_MAX;
+            
+            CHK(cmp_read_uint(&cmp, &req.maxbytes))
             // ... TODO: Check max_bytes is valid. Shouldn't be bigger than 1M or something.
 
-            db_subscribe(topic, conn, start_version, max_bytes);
-            break;
+            db_subscribe(topic, conn, req);
+            return 0;
         }
+            
+        default: return ERR_UNKNOWN_MSG_TYPE;
     }
     
-//    char b[1000];
-//    uint32_t size = sizeof(b);
-//    CHK(cmp_read_str(&cmp, b, &size))
-//    printf("read message %s\n", b);
-    
-    return 0;
 #undef CHK
 }

@@ -296,9 +296,9 @@ sse42_crc32c(uint32_t crc, const unsigned char *buf, unsigned len)
          * 12 cycles per inner loop.  All assuming timing like
          * Haswell.
          */
-        crc = crc32c_shift(crc32c_long, crc) ^ crc0;
-        crc1 = crc32c_shift(crc32c_long, crc1);
-        crc = crc32c_shift(crc32c_2long, crc) ^ crc1;
+        crc = crc32c_shift(crc32c_long, crc) ^ (uint32_t)crc0;
+        crc1 = crc32c_shift(crc32c_long, (uint32_t)crc1);
+        crc = crc32c_shift(crc32c_2long, crc) ^ (uint32_t)crc1;
         crc0 = crc2;
         next += LONG * 2;
         len -= LONG * 3;
@@ -331,9 +331,9 @@ sse42_crc32c(uint32_t crc, const unsigned char *buf, unsigned len)
 #endif
             next += align;
         } while (next < end);
-        crc = crc32c_shift(crc32c_short, crc) ^ crc0;
-        crc1 = crc32c_shift(crc32c_short, crc1);
-        crc = crc32c_shift(crc32c_2short, crc) ^ crc1;
+        crc = crc32c_shift(crc32c_short, crc) ^ (uint32_t)crc0;
+        crc1 = crc32c_shift(crc32c_short, (uint32_t)crc1);
+        crc = crc32c_shift(crc32c_2short, crc) ^ (uint32_t)crc1;
         crc0 = crc2;
         next += SHORT * 2;
         len -= SHORT * 3;
@@ -354,7 +354,7 @@ sse42_crc32c(uint32_t crc, const unsigned char *buf, unsigned len)
     
     /* Compute the crc for any trailing bytes. */
     while (len) {
-        crc0 = _mm_crc32_u8(crc0, *next);
+        crc0 = _mm_crc32_u8((uint32_t)crc0, *next);
         next++;
         len--;
     }

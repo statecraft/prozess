@@ -20,7 +20,6 @@ enum {
 };
 typedef uint8_t out_msg_t;
 
-
 #pragma pack(push, 1)
 
 typedef struct {
@@ -47,8 +46,17 @@ typedef struct {
 
 
 enum sub_flags_t {
-    SUB_FLAG_ONGOING = 1,
+    SUB_FLAG_ONESHOT = 1, // Shared.
+    
+    SUB_OUT_FLAG_COMPLETE = 2, // There's no ongoing subscription
+    SUB_OUT_FLAG_CURRENT = 4, // Caught up to the current version
 };
+
+typedef struct {
+    uint8_t flags;
+    version_t start;
+    uint32_t maxbytes;
+} in_sub_req_t;
 
 typedef struct {
     out_msg_t msg_type; // always OUT_MSG_SUB
@@ -57,7 +65,7 @@ typedef struct {
     uint64_t size; // varint would be better
     uint8_t flags;
     uint8_t data[];
-} sub_response_t;
+} out_sub_response_t;
 
 typedef struct {
     out_msg_t msg_type; // always OUT_MSG_SUB_END
