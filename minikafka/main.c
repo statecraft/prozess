@@ -88,10 +88,10 @@ int main(int argc, const char * argv[]) {
         int nev = kevent(kq, NULL, 0, evList, ARR_SIZE(evList), NULL);
 //        CHK(nev)
         
-        printf("kqueue got %d events\n", nev);
+//        printf("kqueue got %d events\n", nev);
         
         for (int i = 0; i < nev; i++) {
-            print_kevent(&evList[i]);
+//            print_kevent(&evList[i]);
             int fd = (int)evList[i].ident;
             
             switch (evList[i].filter) {
@@ -131,7 +131,7 @@ int main(int argc, const char * argv[]) {
                             // Disconnected during read. Pass to EOF check.
                             if (bytes_read == -1 && errno == ECONNRESET) break;
                             
-                            printf("bytes_read - %zd %d\n", bytes_read, errno);
+//                            printf("bytes_read - %zd %d\n", bytes_read, errno);
                             CHK(bytes_read);
                             
                             if (bytes_read == 0) break;

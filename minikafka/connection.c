@@ -114,7 +114,7 @@ int process_client_message(connection_t *conn, in_msg_t msgtype, void *msg, uint
     return ERR_INVALID_DATA;\
 }
     
-    printf("process client message of type %d, %d bytes\n", msgtype, len);
+//    printf("process client message of type %d, %d bytes\n", msgtype, len);
 
 //    void *_orig = msg;
     
@@ -161,7 +161,7 @@ int process_client_message(connection_t *conn, in_msg_t msgtype, void *msg, uint
             // Binary blob. If happy, memcpy this straight to the pool room.
 
             CHK(cmp_read_bin_size(&cmp, &size))
-            printf("%d bytes in data blob\n", size);
+//            printf("%d bytes in data blob\n", size);
             
 //            printf("byte %x at %ld\n", ((uint8_t *)buf.bytes)[0], buf.bytes - _orig);
             version_t resulting_version = db_append_event(topic, buf);

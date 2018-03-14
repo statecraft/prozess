@@ -28,8 +28,8 @@
 
 KHASH_MAP_INIT_STR(kvmap, version_t)
 
-static const size_t MAX_ENTRY_SIZE = 10*1024*1024; // 10M.
-static const size_t INDEX_SIZE = 1024*1024;
+static const size_t MAX_ENTRY_SIZE = 100*1024*1024; // 100M.
+static const size_t INDEX_SIZE = 10*1024*1024; // 10M.
 typedef struct {
     uint32_t v_offset; // actually the version for now.
     uint32_t data_ptr;
@@ -202,13 +202,13 @@ bool db_key_in_conflict(topic_t *topic, version_t ok_at_v, char *key, size_t key
     // Key missing from db.
     if (iter == kh_end(h)) return false;
     else {
-        printf("key %s found with value %llu\n", key, kh_val(h, iter));
+//        printf("key %s found with value %llu\n", key, kh_val(h, iter));
         return (kh_val(h, iter) >= ok_at_v); // TODO: < or <=?
     }
 }
 
 void db_mark_conflict_key(topic_t *topic, version_t v, char *key, size_t keylen) {
-    printf("mark conflict key %s = %llu\n", key, v);
+//    printf("mark conflict key %s = %llu\n", key, v);
     kh_kvmap_t *h = topic->key_lastmod;
     int ret;
     khint_t iter = kh_put_kvmap(h, key, &ret);
@@ -256,7 +256,7 @@ version_t db_append_event(topic_t *topic, data_buffer event) {
 //    msync(&db->index_map[v_offset], sizeof(index_entry_t), MS_ASYNC);
     }
     
-    printf("Recv message at version %llu\n", version);
+//    printf("Recv message at version %llu\n", version);
     
     topic->next_version += msg.b.batch_size;
     topic->data_pos += sizeof(msg.b) + event.size;
