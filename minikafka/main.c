@@ -46,12 +46,6 @@ void print_kevent(struct kevent *evt) {
 
 // https://gist.github.com/josephg/6c078a241b0e9e538ac04ef28be6e787
 int main(int argc, const char * argv[]) {
-//    uint8_t buf[] = "SE4-CRC32: A hardware accelerated CRC32 implementation for node.js";
-//    uint32_t crc = ~0;
-//    crc = ~calculate_crc32c(crc, buf, sizeof(buf)-1);
-//    printf("crc %u\n", crc);
-//    return 0;
-    
     topic_t *topic = db_new("sometopic");
     if (topic == NULL) {
         fprintf(stderr, "Failed to open data store\n");
@@ -132,9 +126,12 @@ int main(int argc, const char * argv[]) {
                             ssize_t bytes_read = recv(fd, buf.bytes, MIN(buf.size, to_read), 0);
                             
                             // This shouldn't happen in practice, but if it does ignore it.
-                            if (bytes_read == -1 && errno == EAGAIN) break;
+//                            if (bytes_read == -1 && errno == EAGAIN) break;
                             
-//                            printf("bytes_read - %zd %d\n", bytes_read, errno);
+                            // Disconnected during read. Pass to EOF check.
+                            if (bytes_read == -1 && errno == ECONNRESET) break;
+                            
+                            printf("bytes_read - %zd %d\n", bytes_read, errno);
                             CHK(bytes_read);
                             
                             if (bytes_read == 0) break;
