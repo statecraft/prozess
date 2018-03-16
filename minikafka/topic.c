@@ -242,7 +242,7 @@ version_t db_append_event(topic_t *topic, data_buffer event) {
     msg.b.crc32 = ~msg.b.crc32;
     
     pwrite(topic->data_fd, &msg.b, sizeof(msg.b), topic->data_pos);
-    pwrite(topic->data_fd, event.bytes, event.size, sizeof(msg.b) + topic->data_pos);
+    pwrite(topic->data_fd, event.bytes, event.size, topic->data_pos + sizeof(msg.b));
     
     version_t version = topic->next_version; // + base? ???
     uint32_t v_offset = (uint32_t)(version - topic->v_base);
@@ -379,7 +379,7 @@ void db_subscribe(topic_t *topic, connection_t *connection, in_sub_req_t req) {
         if (!(req.flags & SUB_FLAG_ONESHOT) &&
                 (req.maxbytes == UINT32_MAX || v_pos.pos + req.maxbytes > topic->data_pos)) {
             // Catchup mode. We'll send some data now and also subscribe them.
-            printf("Subscription catchup from v%llu to v%llu\n", req.start, topic->next_version-1);
+//            printf("Subscription catchup from v%llu to v%llu\n", req.start, topic->next_version-1);
             
             // Send everything remaining and subscribe.
             off_t len = topic->data_pos - v_pos.pos;
@@ -392,7 +392,7 @@ void db_subscribe(topic_t *topic, connection_t *connection, in_sub_req_t req) {
             db_subscribe_raw(topic, connection, req.maxbytes - (topic->data_pos - v_pos.pos));
         } else {
             // Completion mode. Everything the client needs is in the subscription response.
-            printf("Subscription completion\n");
+//            printf("Subscription completion\n");
             // Stop at an operation boundary. Ugh.
             uint32_t end = data_pos_after_byte(topic, (uint32_t)(v_pos.pos + req.maxbytes));
             // TODO: Hoist this write into the event loop.
@@ -412,16 +412,17 @@ void db_subscribe(topic_t *topic, connection_t *connection, in_sub_req_t req) {
     } else if (req.flags & SUB_FLAG_ONESHOT) {
         // There's no data to send. The client asked for a catchup but doesn't want to actually get
         // subscribed.
-        printf("Empty catchup\n");
+//        printf("Empty catchup\n");
         res.v_start = topic->next_version;
         res.flags = SUB_FLAG_ONESHOT | SUB_OUT_FLAG_COMPLETE | SUB_OUT_FLAG_CURRENT;
         res.size = 0;
         write(connection->fd, &res, sizeof(res));
     } else {
-        printf("Subscription raw\n");
+//        printf("Subscription raw\n");
         res.v_start = topic->next_version;
         res.flags = SUB_OUT_FLAG_CURRENT;
         res.size = 0;
+        
         write(connection->fd, &res, sizeof(res));
         db_subscribe_raw(topic, connection, req.maxbytes);
     }

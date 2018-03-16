@@ -76,6 +76,7 @@ typedef struct {
     out_msg_t msg_type; // always OUT_MSG_HELLO
     uint8_t proto_version;
     source_id_t source;
+    // EPOCH & current version?
 } out_msg_hello_t;
 
 #pragma pack(pop)
