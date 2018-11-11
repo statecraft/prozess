@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <netinet/in.h>
+
 #include "connection.h"
 #include "db.h"
 #include "common.h"
@@ -23,18 +25,18 @@
 
 #define ARR_SIZE(arrexpr) (sizeof(arrexpr) / sizeof(arrexpr[0]))
 
-struct sockaddr_in6 get_socket() {
+static struct sockaddr_in6 get_socket() {
     // Macos automatically binds both ipv4 and 6 when you do this.
     struct sockaddr_in6 addr = {};
     addr.sin6_len = sizeof(addr);
     addr.sin6_family = AF_INET6;
     addr.sin6_addr = in6addr_any; //(struct in6_addr){}; // 0.0.0.0 / ::
     addr.sin6_port = htons(9999);
-    
+
     return addr;
 }
 
-void print_kevent(struct kevent *evt) {
+static void print_kevent(struct kevent *evt) {
     printf("Event ident %lu filter %d data %ld flags %x\n",
            evt->ident,
            evt->filter,
@@ -44,6 +46,12 @@ void print_kevent(struct kevent *evt) {
 
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 
+static topic_t *_atexit_topic;
+static void onexit() {
+    printf("db close\n");
+    db_close(_atexit_topic);
+}
+
 // https://gist.github.com/josephg/6c078a241b0e9e538ac04ef28be6e787
 int main(int argc, const char * argv[]) {
     topic_t *topic = db_new("sometopic");
@@ -51,10 +59,8 @@ int main(int argc, const char * argv[]) {
         fprintf(stderr, "Failed to open data store\n");
         return 1;
     }
-    atexit_b(^{
-        printf("db close\n");
-        db_close(topic);
-    });
+    _atexit_topic = topic;
+    atexit(onexit);
     
 #define CHK(expr) if (expr < 0) { perror(#expr); return 1; }
     struct sockaddr_in6 addr = get_socket();
@@ -72,6 +78,10 @@ int main(int argc, const char * argv[]) {
     CHK(listen(localFd, 5));
 
     printf("Listening on port 9999\n");
+
+    
+    
+    
     
     int kq = kqueue();
     

@@ -1,11 +1,3 @@
-//
-//  message.c
-//  minikafka
-//
-//  Created by Joseph Gentle on 27/8/17.
-//  Copyright © 2017 Joseph Gentle. All rights reserved.
-//
-
 #include "common.h"
 
 #include "connection.h"
