@@ -64,7 +64,7 @@ source_id_t gen_source_id() {
 
 void preallocate(int fd, size_t size) {
 #if defined(__APPLE__)
-    fcntl(index_fd, F_PREALLOCATE, INDEX_SIZE);
+    fcntl(fd, F_PREALLOCATE, INDEX_SIZE);
 #else
     uint8_t *zeroes = malloc(size);
     bzero(zeroes, size);
