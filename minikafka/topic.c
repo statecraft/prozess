@@ -62,6 +62,18 @@ source_id_t gen_source_id() {
     return *(source_id_t *)id_bytes;
 }
 
+void preallocate(int fd, size_t size) {
+#if defined(__APPLE__)
+    fcntl(index_fd, F_PREALLOCATE, INDEX_SIZE);
+#else
+    uint8_t *zeroes = malloc(size);
+    bzero(zeroes, size);
+    ssize_t written = pwrite(fd, zeroes, size, 0);
+    assert(written == size);
+    free(zeroes);
+#endif
+}
+
 const char MAGIC_BYTES[4] = "UKDF"; // microkafka data file
 const size_t DATA_START_POS = sizeof(MAGIC_BYTES) + sizeof(source_id_t);
 
@@ -91,7 +103,7 @@ topic_t *db_new(char *name) {
         CHK(index_fd)
 
         ftruncate(index_fd, INDEX_SIZE); // 0-fill the index.
-        fcntl(index_fd, F_PREALLOCATE, INDEX_SIZE);
+        preallocate(index_fd, INDEX_SIZE);
 //        db_is_new = true;
         
         index_map = mmap(NULL, INDEX_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, index_fd, 0);
@@ -361,6 +373,16 @@ static void db_subscribe_raw(topic_t *topic, connection_t *connection, size_t by
     kv_push(connection_t *, topic->subs, connection);
 }
 
+int sendfile_wrap(int fd, int socket, off_t offset, off_t *len_inout) {
+#if defined(__FreeBSD__)
+return sendfile(fd, socket, offset, *len_inout, NULL, len_inout, 0);
+#elif defined(__APPLE__)
+return sendfile(fd, socket, offset, len_inout, NULL, 0);
+#else
+#error("Sendfile wrap does not know how to call sendfile on host system")
+#endif
+}
+
 void db_subscribe(topic_t *topic, connection_t *connection, in_sub_req_t req) {
     if (req.start == 0) req.start = 1;
     // start == UINT64_MAX if we just want to subscribe to current.
@@ -388,7 +410,7 @@ void db_subscribe(topic_t *topic, connection_t *connection, in_sub_req_t req) {
             res.size = len;
             
             write(connection->fd, &res, sizeof(res));
-            sendfile(topic->data_fd, connection->fd, v_pos.pos, &len, NULL, 0);
+            sendfile_wrap(topic->data_fd, connection->fd, v_pos.pos, &len);
             db_subscribe_raw(topic, connection, req.maxbytes - (topic->data_pos - v_pos.pos));
         } else {
             // Completion mode. Everything the client needs is in the subscription response.
@@ -406,7 +428,7 @@ void db_subscribe(topic_t *topic, connection_t *connection, in_sub_req_t req) {
             res.size = len;
             write(connection->fd, &res, sizeof(res));
             if (len > 0) { // 0 is specialcased in sendfile. If no bytes to send, just skip call.
-                sendfile(topic->data_fd, connection->fd, v_pos.pos, &len, NULL, 0);
+                sendfile_wrap(topic->data_fd, connection->fd, v_pos.pos, &len);
             }
         }
     } else if (req.flags & SUB_FLAG_ONESHOT) {
